@@ -11,23 +11,23 @@ TERRAFORM_DIR="${BASE_DIR}/infrastructure/tf_generated"
 build_lambda() {
     local lambda_dir=$1
     local lambda_name=$(basename $lambda_dir)
-    
+
     echo "Building ${lambda_name}..."
     BUILD_DIR=$(mktemp -d)
-    
+
     cp -R ${lambda_dir}/* ${BUILD_DIR}/
     mkdir -p ${BUILD_DIR}/common
     cp -R ${SRC_DIR}/common/* ${BUILD_DIR}/common/
-    
+
     cat ${BUILD_DIR}/requirements.txt ${SRC_DIR}/common/requirements.txt > ${BUILD_DIR}/combined_requirements.txt
-    
+
     pip install --platform manylinux2014_x86_64 --implementation cp --only-binary=:all: --target ${BUILD_DIR} -r ${BUILD_DIR}/combined_requirements.txt
-    
+
     rm -rf ${BUILD_DIR}/tests ${BUILD_DIR}/*requirements.txt
     (cd ${BUILD_DIR} && zip -r ${TERRAFORM_DIR}/${lambda_name}.zip .)
-    
+
     rm -rf ${BUILD_DIR}
-    
+
     echo "${lambda_name} built successfully."
 }
 

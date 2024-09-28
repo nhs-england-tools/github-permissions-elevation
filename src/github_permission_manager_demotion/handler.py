@@ -23,13 +23,13 @@ class GitHubPermissionRemover:
     def initialise_aws_clients(self):
         self.dynamodb = boto3.resource('dynamodb', region_name=DEFAULT_REGION)
         self.ssm_client = boto3.client('ssm', region_name=DEFAULT_REGION)
-    
+
     def get_all_parameters(self):
         self.app_id = self.get_ssm_parameter('/github_permission_manager_webhook/app_id')
         self.private_key = self.get_ssm_parameter('/github_permission_manager_webhook/private_key')
         self.installation_id = self.get_ssm_parameter('/github_permission_manager_webhook/installation_id')
         self.auth_headers = self.get_token_to_access_github()
-    
+
     def get_token_to_access_github(self):
         github_auth = GitHubAuth(self.private_key, self.app_id, self.installation_id)
         access_token = github_auth.get_access_token()
@@ -104,7 +104,7 @@ class GitHubPermissionRemover:
             self.close_issue(repository, issue_number)
 
             table = self.dynamodb.Table('GithubElevationRequests')
-            
+
             # Update DynamoDB
             table.update_item(
                 Key={'user': user},
@@ -119,7 +119,7 @@ class GitHubPermissionRemover:
 def handler(event, context):
     github_permission_remover = GitHubPermissionRemover()
     github_permission_remover.demote_user_lambda(event, context)
-    
+
     return {
         'statusCode': 200,
         'body': json.dumps({'message': 'User demoted'})

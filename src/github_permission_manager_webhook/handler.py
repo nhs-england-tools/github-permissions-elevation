@@ -245,7 +245,7 @@ class GitHubPermissionManager:
         if not self.request_is_from_github(event, headers):
             print("Request is not from GitHub or is invalid returning 403")
             return {'statusCode': 403, 'body': json.dumps({'response': 'no'})}
-        
+
         github_event = headers.get('X-GitHub-Event', None)
         print("Github event: ", github_event)
         if github_event == 'issues':

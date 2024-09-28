@@ -9,7 +9,7 @@ SRC_DIR="${BASE_DIR}/src"
 install_dependencies() {
     local lambda_dir=$1
     local lambda_name=$(basename $lambda_dir)
-    
+
     echo "Installing dependencies for ${lambda_name}..."
     pip install -r ${lambda_dir}/test_requirements.txt
     echo "Dependencies installed successfully for ${lambda_name}."
