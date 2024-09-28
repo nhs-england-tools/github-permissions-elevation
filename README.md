@@ -25,7 +25,7 @@ This app will monitor for an issue being created requesting for the creator to b
 
 ## Setup
 
-There are a few steps to configure the organisation to faciliate this app.
+There are a few steps to configure the organisation to facilitate this app.
 
 Clone the repository
 
@@ -36,7 +36,7 @@ cd nhs-england-tools/github-permissions-elevation
 
 ### Prerequisites
 
-To run locally it is assumed that you have python 3.12 installed.
+To run locally it is assumed that you have Python 3.12 installed.
 
 ```bash
 sudo add-apt-repository ppa:deadsnakes/ppa
@@ -59,7 +59,7 @@ This team is for your trusted users to be members of. Members of this team will 
 
 ##### Create a Repository
 
-The app should only be notified when new issues are created on specific repositories, namely we want a dedicated repo that org Owners can use to request elevation. Therefore, in your target Org create a new repo called `ElevateMeToOwner` this should be a *Private* repository that can only be accessed by the team created above.
+The app should only be notified when new issues are created on specific repositories, namely we want a dedicated repository that org Owners can use to request elevation. Therefore, in your target Org create a new repository called `ElevateMeToOwner` this should be a *Private* repository that can only be accessed by the team created above.
 
 #### GitHub App Setup
 
@@ -73,7 +73,7 @@ Install the app in your GitHub organization.
 1. Under GitHub Apps select the "New GitHub App" button.
 1. Provide the Apps name as `ElevateMeToOwner`
 1. In the Write text box provide some information about the app.
-1. In Homepage URL paste the link to your GitHub repo README file.
+1. In Homepage URL paste the link to your GitHub repository README file.
 1. In the Webhook section, ensure that the checkbox next to Active is ticked.
 1. In the Webhook URL paste in the link output from the Terraform run.
 1. Create a secret for the token `openssl rand -base64 32` and paste it in to the Secret field.
@@ -90,7 +90,7 @@ You *must* create a private key to be able to install your GitHub app.
 1. Press the `generate a private key` link from the app page
 1. Press the `Generate a private key` button.
 1. This will download your private key to your local machine.
-1. We will need to place this key in our Terraform config.
+1. We will need to store this key as an SSM Parameter in AWS.
 
 ###### Create a Client Secret
 
