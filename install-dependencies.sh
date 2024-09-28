@@ -21,7 +21,7 @@ python3.12 -m venv env
 source env/bin/activate
 python3.12 -m pip install --upgrade pip
 for lambda_dir in ${SRC_DIR}/*/; do
-    if [[ "$lambda_dir" != *"env"* ]]; then
+    if [[ "$lambda_dir" != *"env"* && "$lambda_dir" != *"htmlcov"* ]]; then
         install_dependencies $lambda_dir
     fi
 done
