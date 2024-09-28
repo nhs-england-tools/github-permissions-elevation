@@ -27,7 +27,7 @@ for lambda_dir in ${SRC_DIR}/*/; do
         echo "Running unit tests for ${lambda_dir}..."
         pushd $lambda_dir > /dev/null
         python -m coverage run --source=. -m pytest
-        
+
         cp .coverage ../.coverage.$(basename $lambda_dir)
         coverage_files+=(".coverage.$(basename $lambda_dir)")
         popd > /dev/null

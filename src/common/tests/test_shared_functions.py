@@ -17,7 +17,7 @@ def test_generate_jwt(github_auth, current_time):
     with patch('time.time', return_value=current_time):
         with patch('jwt.encode', return_value="mocked_jwt_token") as mock_jwt_encode:
             jwt_token = github_auth.generate_jwt()
-            
+
             assert jwt_token == "mocked_jwt_token"
             mock_jwt_encode.assert_called_once()
             args, kwargs = mock_jwt_encode.call_args

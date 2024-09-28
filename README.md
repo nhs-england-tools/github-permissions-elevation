@@ -90,7 +90,7 @@ You *must* create a private key to be able to install your GitHub app.
 1. Press the `generate a private key` link from the app page
 1. Press the `Generate a private key` button.
 1. This will download your private key to your local machine.
-1. We will need to store this key as an SSM Parameter in AWS.
+1. We will need to store this key as an SSM parameter in AWS.
 
 ###### Create a Client Secret
 
