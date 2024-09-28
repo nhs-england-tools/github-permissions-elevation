@@ -23,7 +23,7 @@ cd ${SRC_DIR}
 source env/bin/activate
 coverage_files=()
 for lambda_dir in ${SRC_DIR}/*/; do
-    if [[ "$lambda_dir" != *"env"* ]]; then
+    if [[ "$lambda_dir" != *"env"* && "$lambda_dir" != *"htmlcov"* ]]; then
         echo "Running unit tests for ${lambda_dir}..."
         pushd $lambda_dir > /dev/null
         python -m coverage run --source=. -m pytest
@@ -39,8 +39,6 @@ if [ ${#coverage_files[@]} -ne 0 ]; then
     python -m coverage combine "${coverage_files[@]}"
     python -m coverage html
     python -m coverage xml -o coverage.xml
-    echo "Removing individual coverage files..."
-    rm "${coverage_files[@]}"
 else
     echo "No coverage files found."
 fi

@@ -33,7 +33,7 @@ build_lambda() {
 
 # Build all lambdas
 for lambda_dir in ${SRC_DIR}/*/; do
-    if [[ "$lambda_dir" != *"common"* ]]; then
+    if [[ "$lambda_dir" != *"common"* && "$lambda_dir" != *"htmlcov"* && "$lambda_dir" != *"env"* ]]; then
         build_lambda $lambda_dir
     fi
 done
