@@ -98,7 +98,7 @@ To authenticate as the app you need to generate a Client Secret. From the app se
 
 1. Press the Generate a new client secret button
 1. Copy the provided client secret
-1. This should then be stored in SSM Paramater Store
+1. This should then be stored in SSM paramater store
 
 ###### Update AWS SSM entries
 
