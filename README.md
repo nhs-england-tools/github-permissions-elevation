@@ -3,7 +3,7 @@
 [![CI/CD Pull Request](https://github.com/nhs-england-tools/github-permissions-elevation/actions/workflows/cicd-1-pull-request.yaml/badge.svg)](https://github.com/nhs-england-tools/github-permissions-elevation/actions/workflows/cicd-1-pull-request.yaml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=github-permissions-elevation&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=github-permissions-elevation)
 
-Currently there are specific tasks within GitHub that require the "Owner" permission. We would like to avoid individuals having long standing super-user permissions on their user. This app will enable users to operate as normal member level permissions for the majority of their tasks, only assuming the "Owner" level permissions when they require them. This can also provide an audit of when these permissions are assumed and the reason that they are assumed for.
+Currently there are specific tasks within GitHub that require the "Owner" permission. We would like to avoid individuals having long standing super-user permissions on their user. This app will enable users to operate as normal member level permissions for the majority of their tasks, only assuming the "Owner" level permissions when they require them. This will also provide an audit of when these permissions are assumed and the reason that they are assumed for.
 
 This app will monitor for an issue being created requesting for the creator to be elevated to an Owner of the GitHub Organization. This user should be from a specific GitHub Team, and when another member of that team responds with "approved" or some other positive response, the app will update the user to "Owner". After a set period of time the app should demote the user back to a normal permission level.
 
@@ -49,6 +49,7 @@ sudo apt install python3.12-venv
 ##### Create a team
 
 This team is for your trusted users to be members of. Members of this team will be able to request to be elevated to an Owner and will be able to approve requests to be elevated to Owner. From the organisation page in GitHub navigate to Teams
+
 1. Create a new team
 1. set the Team name to `can escalate to become an owner`
 1. Set Team visibility to `Secret`
@@ -60,7 +61,7 @@ This team is for your trusted users to be members of. Members of this team will 
 
 The app should only be notified when new issues are created on specific repositories, namely we want a dedicated repo that org Owners can use to request elevation. Therefore, in your target Org create a new repo called `ElevateMeToOwner` this should be a *Private* repository that can only be accessed by the team created above.
 
-#### GitHub App Setup:
+#### GitHub App Setup
 
 Create a GitHub App with the necessary permissions to manage organization members and read issues.
 Install the app in your GitHub organization.
@@ -85,6 +86,7 @@ Install the app in your GitHub organization.
 ###### Generate a Private Key
 
 You *must* create a private key to be able to install your GitHub app.
+
 1. Press the `generate a private key` link from the app page
 1. Press the `Generate a private key` button.
 1. This will download your private key to your local machine.
@@ -93,6 +95,7 @@ You *must* create a private key to be able to install your GitHub app.
 ###### Create a Client Secret
 
 To authenticate as the app you need to generate a Client Secret. From the app settings page:
+
 1. Press the Generate a new client secret button
 1. Copy the provided client secret
 1. This should then be stored in SSM Paramater Store
@@ -108,16 +111,18 @@ We now need to ensure that the necessary information is stored in our AWS SSM pa
 1. app id
 1. installation ID
 
-###### Install the app to your Org.
+###### Install the app to your Org
 
-from the GitHub app page select the `Install App` option from the left hand menu.
+From the GitHub app page select the `Install App` option from the left hand menu.
 You will be shown all of the organisations you can install to as well as your user - please select the organisation you wish to install to and press the `Install` button.
 
 In the Install dialogue select to Install on your org to `Only select repositories`
 Select the `ElevateMeToOwner` repository you created earlier.
 Review the permissions being requested - these are:
+
 1. Read access to metadata
 1. Read and write access to issues and members
+
 Press the `Install` button.
 
 ### Configuration
