@@ -1,5 +1,5 @@
 resource "aws_dynamodb_table" "elevation_requests" {
-  name         = "GithubElevationRequests"
+  name         = "${terraform.workspace}_GithubElevationRequests"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "user"
   range_key    = "requested_at"

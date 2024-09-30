@@ -3,6 +3,7 @@ import boto3
 import requests
 from datetime import datetime
 from common.shared_functions import GitHubAuth, DEFAULT_REGION
+import os
 
 def is_last_org_owner(all_owners, user):
     if len(all_owners) == 1:
@@ -25,9 +26,10 @@ class GitHubPermissionRemover:
         self.ssm_client = boto3.client('ssm', region_name=DEFAULT_REGION)
 
     def get_all_parameters(self):
-        self.app_id = self.get_ssm_parameter('/github_permission_manager_webhook/app_id')
-        self.private_key = self.get_ssm_parameter('/github_permission_manager_webhook/private_key')
-        self.installation_id = self.get_ssm_parameter('/github_permission_manager_webhook/installation_id')
+        workspace = os.getenv('WORKSPACE')
+        self.app_id = self.get_ssm_parameter(f"/github_permission_manager_webhook/${workspace}_app_id")
+        self.private_key = self.get_ssm_parameter(f"/github_permission_manager_webhook/${workspace}_private_key")
+        self.installation_id = self.get_ssm_parameter(f"/github_permission_manager_webhook/${workspace}_installation_id")
         self.auth_headers = self.get_token_to_access_github()
 
     def get_token_to_access_github(self):

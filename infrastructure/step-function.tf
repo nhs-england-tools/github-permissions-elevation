@@ -1,5 +1,5 @@
 resource "aws_sfn_state_machine" "user_demotion" {
-  name     = "github-user-demotion"
+  name     = "${terraform.workspace}_github-user-demotion"
   role_arn = aws_iam_role.step_functions_exec.arn
 
   definition = jsonencode({

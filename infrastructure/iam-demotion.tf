@@ -10,7 +10,7 @@ data "aws_iam_policy_document" "assume_lambda_role_github_permission_manager_dem
 }
 
 resource "aws_iam_role" "github_permission_manager_demotion" {
-  name               = "AssumeLambdaRole_github_permission_manager_demotion"
+  name               = "${terraform.workspace}_AssumeLambdaRole_github_permission_manager_demotion"
   description        = "Role for lambda to assume lambda"
   assume_role_policy = data.aws_iam_policy_document.assume_lambda_role_github_permission_manager_demotion.json
 }
@@ -53,7 +53,7 @@ data "aws_iam_policy_document" "allow_lambda_logging_github_permission_manager_d
 }
 
 resource "aws_iam_policy" "function_logging_policy_github_permission_manager_demotion" {
-  name        = "AllowLambdaLoggingPolicy_github_permission_manager_demotion"
+  name        = "${terraform.workspace}_AllowLambdaLoggingPolicy_github_permission_manager_demotion"
   description = "Policy for lambda cloudwatch logging"
   policy      = data.aws_iam_policy_document.allow_lambda_logging_github_permission_manager_demotion.json
 }
@@ -64,7 +64,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logging_policy_attachment_gith
 }
 
 resource "aws_iam_role" "step_functions_exec" {
-  name = "github-permission-manager-step-functions-role"
+  name = "${terraform.workspace}_github-permission-manager-step-functions-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

@@ -1,5 +1,5 @@
 resource "aws_apigatewayv2_api" "github_permission_manager_webhook" {
-  name          = "github_permission_manager_webhook"
+  name          = "${terraform.workspace}_github_permission_manager_webhook"
   protocol_type = "HTTP"
   description   = "Serverless API gateway for HTTP API and AWS Lambda function python"
 
@@ -20,7 +20,7 @@ resource "aws_apigatewayv2_api" "github_permission_manager_webhook" {
 resource "aws_apigatewayv2_stage" "github_permission_manager_webhook" {
   api_id = aws_apigatewayv2_api.github_permission_manager_webhook.id
 
-  name        = "github_permission_manager_webhook"
+  name        = "${terraform.workspace}_github_permission_manager_webhook"
   auto_deploy = true
 
   access_log_settings {

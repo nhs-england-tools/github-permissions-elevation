@@ -94,7 +94,8 @@ def test_initialise_aws_clients(github_permission_manager):
         mock_client.assert_any_call('ssm', region_name='eu-west-2')
 
 def test_get_all_parameters(github_permission_manager):
-    with patch.object(github_permission_manager, 'get_ssm_parameter') as mock_get_ssm_parameter, \
+    with patch.dict('os.environ', {'WORKSPACE': 'workspace'}), \
+        patch.object(github_permission_manager, 'get_ssm_parameter') as mock_get_ssm_parameter, \
         patch.object(github_permission_manager, 'get_token_to_access_github') as mock_get_token_to_access_github:
 
         mock_get_ssm_parameter.side_effect = lambda param: f"mock_{param.split('/')[-1]}"
@@ -102,19 +103,19 @@ def test_get_all_parameters(github_permission_manager):
 
         github_permission_manager.get_all_parameters()
 
-        mock_get_ssm_parameter.assert_any_call('/github_permission_manager_webhook/app_id')
-        mock_get_ssm_parameter.assert_any_call('/github_permission_manager_webhook/private_key')
-        mock_get_ssm_parameter.assert_any_call('/github_permission_manager_webhook/installation_id')
-        mock_get_ssm_parameter.assert_any_call('/github_permission_manager_webhook/secret_for_webhook')
-        mock_get_ssm_parameter.assert_any_call('/github_permission_manager_demotion/step_function_arn')
+        mock_get_ssm_parameter.assert_any_call('/github_permission_manager_webhook/workspace_app_id')
+        mock_get_ssm_parameter.assert_any_call('/github_permission_manager_webhook/workspace_private_key')
+        mock_get_ssm_parameter.assert_any_call('/github_permission_manager_webhook/workspace_installation_id')
+        mock_get_ssm_parameter.assert_any_call('/github_permission_manager_webhook/workspace_secret_for_webhook')
+        mock_get_ssm_parameter.assert_any_call('/github_permission_manager_demotion/workspace_step_function_arn')
         # Verify that get_token_to_access_github was called
         mock_get_token_to_access_github.assert_called_once()
 
-        assert github_permission_manager.app_id == "mock_app_id"
-        assert github_permission_manager.private_key == "mock_private_key"
-        assert github_permission_manager.installation_id == "mock_installation_id"
-        assert github_permission_manager.webhook_secret == "mock_secret_for_webhook"
-        assert github_permission_manager.step_function_arn == "mock_step_function_arn"
+        assert github_permission_manager.app_id == "mock_workspace_app_id"
+        assert github_permission_manager.private_key == "mock_workspace_private_key"
+        assert github_permission_manager.installation_id == "mock_workspace_installation_id"
+        assert github_permission_manager.webhook_secret == "mock_workspace_secret_for_webhook"
+        assert github_permission_manager.step_function_arn == "mock_workspace_step_function_arn"
         assert github_permission_manager.auth_headers == {"Authorization": "Bearer mock_token"}
 
 def test_post_comment_on_issue(github_permission_manager):

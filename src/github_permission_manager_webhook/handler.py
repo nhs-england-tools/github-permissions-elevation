@@ -40,11 +40,12 @@ class GitHubPermissionManager:
         self.ssm_client = boto3.client('ssm', region_name=DEFAULT_REGION)
 
     def get_all_parameters(self):
-        self.app_id = self.get_ssm_parameter('/github_permission_manager_webhook/app_id')
-        self.private_key = self.get_ssm_parameter('/github_permission_manager_webhook/private_key')
-        self.installation_id = self.get_ssm_parameter('/github_permission_manager_webhook/installation_id')
-        self.webhook_secret = self.get_ssm_parameter('/github_permission_manager_webhook/secret_for_webhook')
-        self.step_function_arn = self.get_ssm_parameter('/github_permission_manager_demotion/step_function_arn')
+        workspace = os.getenv('WORKSPACE')
+        self.app_id = self.get_ssm_parameter(f"/github_permission_manager_webhook/{workspace}_app_id")
+        self.private_key = self.get_ssm_parameter(f"/github_permission_manager_webhook/{workspace}_private_key")
+        self.installation_id = self.get_ssm_parameter(f"/github_permission_manager_webhook/{workspace}_installation_id")
+        self.webhook_secret = self.get_ssm_parameter(f"/github_permission_manager_webhook/{workspace}_secret_for_webhook")
+        self.step_function_arn = self.get_ssm_parameter(f"/github_permission_manager_demotion/{workspace}_step_function_arn")
         self.auth_headers = self.get_token_to_access_github()
 
     def get_token_to_access_github(self):
