@@ -96,6 +96,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Full history is needed to improving relevancy of reporting
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: "Run test coverage check"
+        run: |
+          make dependencies
+          make test-coverage
       - name: "Perform static analysis"
         uses: ./.github/actions/perform-static-analysis
         with:
