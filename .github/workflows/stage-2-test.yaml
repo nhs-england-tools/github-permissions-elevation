@@ -104,6 +104,8 @@ jobs:
         run: |
           make dependencies
           make test-coverage
+          ls -lrta src/common/__init__.py
+          head -n 10 src/coverage.xml
       - name: "Perform static analysis"
         uses: ./.github/actions/perform-static-analysis
         with:
