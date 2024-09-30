@@ -46,7 +46,7 @@ resource "aws_apigatewayv2_stage" "github_permission_manager_webhook" {
 resource "aws_cloudwatch_log_group" "github_permission_manager_webhook" {
   name = "/aws/api_gw/${aws_apigatewayv2_api.github_permission_manager_webhook.name}"
 
-  retention_in_days = 7
+  retention_in_days = 30
 }
 
 resource "aws_apigatewayv2_integration" "github_permission_manager_webhook_lambda" {

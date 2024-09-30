@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
+import time
 import json
 import jwt
 from cryptography.hazmat.primitives import serialization
@@ -39,6 +40,26 @@ def generate_mock_private_key():
     )
     return pem.decode('utf-8')
 
+def generate_mock_key_pair():
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048
+    )
+    public_key = private_key.public_key()
+
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption()
+    )
+
+    public_pem = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo
+    )
+
+    return private_pem.decode('utf-8'), public_pem.decode('utf-8')
+
 def test_get_headers_from_event():
     event = {'headers': {'X-GitHub-Event': 'issues'}}
     assert get_headers_from_event(event) == {'X-GitHub-Event': 'issues'}
@@ -53,16 +74,19 @@ def test_comment_contains_approval():
 
 def test_github_auth_generate_jwt():
     mock_private_key = generate_mock_private_key()
+    mock_private_key, mock_public_key = generate_mock_key_pair()
     auth = GitHubAuth(mock_private_key, 'app_id', 'installation_id')
-    with patch('time.time', return_value=1000000000):
+
+    current_time = int(time.time())
+    with patch('time.time', return_value=current_time):
         jwt_token = auth.generate_jwt()
 
         # Decode the JWT to verify its contents
-        decoded = jwt.decode(jwt_token, mock_private_key, algorithms=['RS256'], options={"verify_signature": False})
+        decoded = jwt.decode(jwt_token, mock_public_key, algorithms=['RS256'])
 
         assert decoded['iss'] == 'app_id'
-        assert decoded['iat'] == 1000000000
-        assert decoded['exp'] == 1000000600  # 10 minutes later
+        assert decoded['iat'] == current_time
+        assert decoded['exp'] == current_time + 600  # 10 minutes later
 
 def test_get_token_to_access_github(github_permission_manager):
     with patch('github_permission_manager_webhook.handler.GitHubAuth') as MockGitHubAuth:

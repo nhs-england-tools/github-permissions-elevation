@@ -22,7 +22,7 @@ resource "aws_lambda_function" "github_permission_manager_webhook" {
 
 resource "aws_cloudwatch_log_group" "github_permission_manager_webhook_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.github_permission_manager_webhook.function_name}"
-  retention_in_days = 7
+  retention_in_days = 30
 }
 
 resource "aws_lambda_function" "github_permission_manager_demotion" {
@@ -48,5 +48,5 @@ resource "aws_lambda_function" "github_permission_manager_demotion" {
 
 resource "aws_cloudwatch_log_group" "github_permission_manager_demotion_log_group" {
   name              = "/aws/lambda/${aws_lambda_function.github_permission_manager_demotion.function_name}"
-  retention_in_days = 7
+  retention_in_days = 30
 }
