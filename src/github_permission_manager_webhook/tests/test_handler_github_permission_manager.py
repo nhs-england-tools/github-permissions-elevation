@@ -73,7 +73,6 @@ def test_comment_contains_approval():
     assert comment_contains_approval(comment) == True
 
 def test_github_auth_generate_jwt():
-    mock_private_key = generate_mock_private_key()
     mock_private_key, mock_public_key = generate_mock_key_pair()
     auth = GitHubAuth(mock_private_key, 'app_id', 'installation_id')
 

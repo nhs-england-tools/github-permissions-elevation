@@ -105,7 +105,6 @@ jobs:
           make dependencies
           make test-coverage
           sed -i 's|<source></source>|<source>/usr/src/src/</source>|g' src/coverage.xml
-          head -n 10 src/coverage.xml
       - name: "Perform static analysis"
         uses: ./.github/actions/perform-static-analysis
         with:

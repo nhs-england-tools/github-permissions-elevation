@@ -6,9 +6,8 @@ from common.shared_functions import GitHubAuth, DEFAULT_REGION
 import os
 
 def is_last_org_owner(all_owners, user):
-    if len(all_owners) == 1:
-        if user in all_owners:
-            return True
+    if len(all_owners) == 1 and user in all_owners:
+        return True
     return False
 
 class GitHubPermissionRemover:
