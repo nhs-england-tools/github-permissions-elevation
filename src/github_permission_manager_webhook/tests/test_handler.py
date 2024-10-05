@@ -1,7 +1,8 @@
 import pytest
 import hmac
 import hashlib
-from github_permission_manager_webhook.handler import GitHubPermissionManager, get_headers_from_event, request_is_to_elevate_access, comment_contains_approval, approving_own_request
+from github_permission_manager_webhook.handler import GitHubPermissionManager
+from github_permission_manager_webhook.utilities import get_headers_from_event, request_is_to_elevate_access, comment_contains_approval, approving_own_request
 
 def test_is_valid_request_valid_signature():
     test_permission_manager = GitHubPermissionManager()
@@ -130,10 +131,24 @@ def test_request_is_to_elevate_access_with_keyword_in_title():
     }
     assert request_is_to_elevate_access(issue) == True
 
+def test_request_is_to_elevate_access_with_keyword_in_title_mixed_case():
+    issue = {
+        'title': 'Please request Access Elevation',
+        'body': 'Some body content'
+    }
+    assert request_is_to_elevate_access(issue) == True
+
 def test_request_is_to_elevate_access_with_keyword_in_body():
     issue = {
         'title': 'Some title',
         'body': 'This is a request to elevate access'
+    }
+    assert request_is_to_elevate_access(issue) == True
+
+def test_request_is_to_elevate_access_with_keyword_in_body_mixed_case():
+    issue = {
+        'title': 'Some title',
+        'body': 'This is a request to Elevate Access'
     }
     assert request_is_to_elevate_access(issue) == True
 
@@ -158,6 +173,12 @@ def test_request_is_to_elevate_access_with_missing_title_and_body():
 def test_comment_contains_approval_with_approve():
     comment = {
         'body': 'I approve this request.'
+    }
+    assert comment_contains_approval(comment) == True
+
+def test_comment_contains_approval_with_approve_mixed_case():
+    comment = {
+        'body': 'I Approve this request.'
     }
     assert comment_contains_approval(comment) == True
 

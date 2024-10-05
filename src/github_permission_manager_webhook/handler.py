@@ -5,21 +5,8 @@ import hashlib
 import requests
 import os
 from datetime import datetime
-from common.shared_functions import GitHubAuth, DEFAULT_REGION
-
-# Utility functions
-def get_headers_from_event(event):
-    return event.get('headers', {}) or event.get('Headers', {})
-
-def request_is_to_elevate_access(issue):
-    keywords = ['request', 'elevate', 'elevation']
-    return any(keyword in issue.get('title', '') or keyword in issue.get('body', '') for keyword in keywords)
-
-def comment_contains_approval(comment):
-    return 'approve' in comment['body'] or '👍' in comment['body']
-
-def approving_own_request(user, original_requestor):
-    return user == original_requestor
+from common.shared_functions import GitHubAuth, DEFAULT_REGION, ESCALATION_TEAM_NAME, ELEVATION_BOT
+from utilities import get_headers_from_event, request_is_to_elevate_access, comment_contains_approval, approving_own_request
 
 class GitHubPermissionManager:
     def __init__(self, requests_module=requests):
@@ -63,26 +50,36 @@ class GitHubPermissionManager:
     def post_comment_on_issue(self, payload, comment_body):
         print(f"Posting comment: {comment_body}")
         data = {"body": comment_body}
-        response = self.requests.post(
-            f"https://api.github.com/repos/{payload['repository']['full_name']}/issues/{payload['issue']['number']}/comments",
-            headers=self.auth_headers,
-            json=data
-        )
-        print(f"Comment posted: {response.status_code}")
+        try:
+            response = self.requests.post(
+                f"https://api.github.com/repos/{payload['repository']['full_name']}/issues/{payload['issue']['number']}/comments",
+                headers=self.auth_headers,
+                json=data
+            )
+            response.raise_for_status()
+            print(f"Comment posted: {response.status_code}")
+        except requests.exceptions.HTTPError as http_err:
+            print(f"HTTP error occurred: {http_err}")
+        except Exception as err:
+            print(f"Other error occurred: {err}")
 
     def make_owner_on_github(self, payload, user):
         data = {"role": "admin"}
-        response = self.requests.put(
-            f"https://api.github.com/orgs/{payload['organization']['login']}/memberships/{user}",
-            headers=self.auth_headers,
-            json=data
-        )
-        if response is None:
-            print("No response received from GitHub API")
-        else:
-            print(f"{'Promoted' if response.status_code == 200 else 'Failed to promote'} user to Owner: {response.status_code}")
+        try:
+            response = self.requests.put(
+                f"https://api.github.com/orgs/{payload['organization']['login']}/memberships/{user}",
+                headers=self.auth_headers,
+                json=data
+            )
+            response.raise_for_status()
+            print(f"Promoted user to Owner: {response.status_code}")
+        except requests.exceptions.HTTPError as http_err:
+            print(f"HTTP error occurred: {http_err}")
+        except requests.exceptions.RequestException as req_err:
+            print(f"Request error occurred: {req_err}")
+        except Exception as err:
+            print(f"Other error occurred: {err}")
 
-    # Team membership methods
     def is_team_member(self, username, org_name, team_slug):
         team_id = self._get_team_id(org_name, team_slug)
         return self._check_membership(team_id, username) if team_id else False
@@ -107,7 +104,6 @@ class GitHubPermissionManager:
         print(f"Error checking membership: {response.status_code}")
         return False
 
-    # Request validation methods
     def request_is_from_github(self, event, headers):
         return self._is_valid_signature(event, headers)
 
@@ -130,7 +126,6 @@ class GitHubPermissionManager:
     def _parse_payload(self, payload):
         return json.loads(payload) if isinstance(payload, str) else payload
 
-    # Issue handling methods
     def handle_issue(self, payload):
         payload = self._parse_payload(payload)
         if self._is_elevation_request(payload):
@@ -145,7 +140,7 @@ class GitHubPermissionManager:
         return payload['action'] == 'opened' and request_is_to_elevate_access(payload['issue'])
 
     def _is_user_eligible_for_elevation(self, user, payload):
-        return self.is_team_member(user, payload['repository']['owner']['login'], 'can-escalate-to-become-an-owner')
+        return self.is_team_member(user, payload['repository']['owner']['login'], ESCALATION_TEAM_NAME)
 
     def _process_elevation_request(self, payload, issue, user):
         self.insert_into_dynamodb(payload, issue, user)
@@ -164,24 +159,24 @@ class GitHubPermissionManager:
             'requested_at': datetime.now().isoformat()
         })
 
-    # Comment handling methods
     def handle_issue_comment(self, payload):
         payload = self._parse_payload(payload)
-        if payload['action'] == 'created':
-            comment = payload['comment']
-            user = comment['user']['login']
-            if self._is_comment_from_bot(user):
-                return
-            if not self._is_user_eligible_for_elevation(user, payload):
-                self.post_comment_on_issue(payload, f"@{user} has commented on the elevation request but is not a member of the elevators team.")
-                return
-            if comment_contains_approval(comment):
-                self._handle_approval_comment(payload, user)
-            else:
-                self.post_comment_on_issue(payload, f"@{user} has commented but not approved the elevation.")
+        if payload['action'] != 'created':
+            return
+        comment = payload['comment']
+        user = comment['user']['login']
+        if self._is_comment_from_bot(user):
+            return
+        if not self._is_user_eligible_for_elevation(user, payload):
+            self.post_comment_on_issue(payload, f"@{user} has commented on the elevation request but is not a member of the elevators team.")
+            return
+        if comment_contains_approval(comment):
+            self._handle_approval_comment(payload, user)
+        else:
+            self.post_comment_on_issue(payload, f"@{user} has commented but not approved the elevation.")
 
     def _is_comment_from_bot(self, user):
-        return user == 'elevatemetoowner[bot]'
+        return user == ELEVATION_BOT
 
     def _handle_approval_comment(self, payload, user):
         original_requestor = payload['issue']['user']['login']
@@ -191,7 +186,6 @@ class GitHubPermissionManager:
             return
         self.promote_user_to_owner(payload, original_requestor)
 
-    # User promotion methods
     def promote_user_to_owner(self, payload, user):
         print(f"Promoting user {user} to owner.")
         most_recent_request = self.get_most_recent_request(user)

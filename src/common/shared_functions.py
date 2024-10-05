@@ -3,6 +3,8 @@ import time
 import requests
 
 DEFAULT_REGION = 'eu-west-2'
+ESCALATION_TEAM_NAME = 'can-escalate-to-become-an-owner'
+ELEVATION_BOT = 'elevatemetoowner[bot]'
 
 class GitHubAuth:
     def __init__(self, private_key, app_id, installation_id):

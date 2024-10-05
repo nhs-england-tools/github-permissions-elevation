@@ -6,12 +6,15 @@ import json
 import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+import requests
 
-from github_permission_manager_webhook.handler import GitHubPermissionManager, GitHubAuth, get_headers_from_event, request_is_to_elevate_access, comment_contains_approval, approving_own_request
+from github_permission_manager_webhook.handler import GitHubPermissionManager, GitHubAuth
+from github_permission_manager_webhook.utilities import get_headers_from_event, request_is_to_elevate_access, comment_contains_approval, approving_own_request
 
 @pytest.fixture
 def github_permission_manager():
-    return GitHubPermissionManager()
+    mock_requests = MagicMock()
+    return GitHubPermissionManager(requests_module=mock_requests)
 
 @pytest.fixture
 def mock_ssm_client():
@@ -145,20 +148,66 @@ def test_post_comment_on_issue(github_permission_manager):
     payload = {'repository': {'full_name': 'org/repo'}, 'issue': {'number': 1}}
     comment_body = 'Test comment'
 
-    with patch('requests.post') as mock_post:
-        mock_response = MagicMock()
-        mock_response.status_code = 201
-        mock_post.return_value = mock_response
+    mock_post = github_permission_manager.requests.post
+    mock_response = MagicMock()
+    mock_response.status_code = 201
+    mock_post.return_value = mock_response
 
-        github_permission_manager.post_comment_on_issue(payload, comment_body)
+    github_permission_manager.post_comment_on_issue(payload, comment_body)
 
-        mock_post.assert_called_once_with(
-            'https://api.github.com/repos/org/repo/issues/1/comments',
-            headers=github_permission_manager.auth_headers,
-            json={"body": comment_body}
-        )
+    mock_post.assert_called_once_with(
+        'https://api.github.com/repos/org/repo/issues/1/comments',
+        headers=github_permission_manager.auth_headers,
+        json={"body": comment_body}
+    )
 
-        assert mock_post.called
+    assert mock_post.called
+
+def test_post_comment_on_issue_http_error(github_permission_manager, capfd):
+    payload = {'repository': {'full_name': 'org/repo'}, 'issue': {'number': 1}}
+    comment_body = 'Test comment'
+
+    mock_post = github_permission_manager.requests.post
+    mock_response = MagicMock()
+    mock_response.status_code = 404
+    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("Not Found")
+    mock_post.return_value = mock_response
+
+    github_permission_manager.post_comment_on_issue(payload, comment_body)
+
+    mock_post.assert_called_once_with(
+        'https://api.github.com/repos/org/repo/issues/1/comments',
+        headers=github_permission_manager.auth_headers,
+        json={"body": comment_body}
+    )
+
+    # Capture the output
+    captured = capfd.readouterr()
+    assert "HTTP error occurred: Not Found" in captured.out
+    assert mock_post.called
+
+def test_post_comment_on_issue_other_error(github_permission_manager, capfd):
+    payload = {'repository': {'full_name': 'org/repo'}, 'issue': {'number': 1}}
+    comment_body = 'Test comment'
+
+    mock_post = github_permission_manager.requests.post
+    mock_response = MagicMock()
+    mock_response.status_code = 500
+    mock_response.raise_for_status.side_effect = Exception("Some other error")
+    mock_post.return_value = mock_response
+
+    github_permission_manager.post_comment_on_issue(payload, comment_body)
+
+    mock_post.assert_called_once_with(
+        'https://api.github.com/repos/org/repo/issues/1/comments',
+        headers=github_permission_manager.auth_headers,
+        json={"body": comment_body}
+    )
+
+    # Capture the output
+    captured = capfd.readouterr()
+    assert "Other error occurred: Some other error" in captured.out
+    assert mock_post.called
 
 def test_make_owner_on_github(github_permission_manager):
     payload = {
@@ -166,71 +215,101 @@ def test_make_owner_on_github(github_permission_manager):
     }
     user = 'test-user'
 
-    with patch('requests.put') as mock_put:
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_put.return_value = mock_response
+    mock_put = github_permission_manager.requests.put
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_put.return_value = mock_response
 
-        github_permission_manager.make_owner_on_github(payload, user)
+    github_permission_manager.make_owner_on_github(payload, user)
 
-        mock_put.assert_called_once_with(
-            'https://api.github.com/orgs/test-org/memberships/test-user',
-            headers=github_permission_manager.auth_headers,
-            json={"role": "admin"}
-        )
+    mock_put.assert_called_once_with(
+        'https://api.github.com/orgs/test-org/memberships/test-user',
+        headers=github_permission_manager.auth_headers,
+        json={"role": "admin"}
+    )
 
-        assert mock_response.status_code == 200
+    assert mock_response.status_code == 200
 
 def test_is_team_member(github_permission_manager):
     user = 'user'
     org = 'org'
     team = 'team'
 
-    with patch('requests.get') as mock_get:
-        mock_response_team = MagicMock()
-        mock_response_team.json.return_value = {'id': 1}
-        mock_response_team.status_code = 200
+    mock_get = github_permission_manager.requests.get
+    mock_response_team = MagicMock()
+    mock_response_team.json.return_value = {'id': 1}
+    mock_response_team.status_code = 200
 
-        mock_response_membership = MagicMock()
-        mock_response_membership.status_code = 200
+    mock_response_membership = MagicMock()
+    mock_response_membership.status_code = 200
 
-        mock_get.side_effect = [mock_response_team, mock_response_membership]
+    mock_get.side_effect = [mock_response_team, mock_response_membership]
 
-        result = github_permission_manager.is_team_member(user, org, team)
+    result = github_permission_manager.is_team_member(user, org, team)
 
-        mock_get.assert_any_call(
-            f'https://api.github.com/orgs/{org}/teams/{team}',
-            headers=github_permission_manager.auth_headers
-        )
+    mock_get.assert_any_call(
+        f'https://api.github.com/orgs/{org}/teams/{team}',
+        headers=github_permission_manager.auth_headers
+    )
 
-        mock_get.assert_any_call(
-            f'https://api.github.com/teams/1/memberships/{user}',
-            headers=github_permission_manager.auth_headers
-        )
+    mock_get.assert_any_call(
+        f'https://api.github.com/teams/1/memberships/{user}',
+        headers=github_permission_manager.auth_headers
+    )
 
-        assert result == True
+    assert result == True
 
-def test_handle_issue(github_permission_manager):
+def test_handle_issue_ineligible_user(github_permission_manager):
     payload = {
         'action': 'opened',
         'issue': {'title': 'Request elevation', 'user': {'login': 'user'}},
         'repository': {'owner': {'login': 'org'}}
     }
-    with patch.object(github_permission_manager, '_is_user_eligible_for_elevation', return_value=True), \
-        patch.object(github_permission_manager, '_process_elevation_request') as mock_process:
+    with patch.object(github_permission_manager, '_is_user_eligible_for_elevation', return_value=False) as mock_elevation_eligible, \
+        patch.object(github_permission_manager, '_process_elevation_request') as mock_process, \
+        patch.object(github_permission_manager, '_notify_ineligible_user') as mock_notify_ineligible:
+        github_permission_manager.handle_issue(json.dumps(payload))
+        mock_process.assert_not_called()
+        mock_elevation_eligible.assert_called_once()
+        mock_notify_ineligible.assert_called_once()
+
+def test_handle_issue_eligible_user(github_permission_manager):
+    payload = {
+        'action': 'opened',
+        'issue': {'title': 'Request elevation', 'user': {'login': 'user'}},
+        'repository': {'owner': {'login': 'org'}}
+    }
+    with patch.object(github_permission_manager, '_is_user_eligible_for_elevation', return_value=True) as mock_elevation_eligible, \
+        patch.object(github_permission_manager, '_process_elevation_request') as mock_process, \
+        patch.object(github_permission_manager, '_notify_ineligible_user') as mock_notify_ineligible:
         github_permission_manager.handle_issue(json.dumps(payload))
         mock_process.assert_called_once()
+        mock_elevation_eligible.assert_called_once()
+        mock_notify_ineligible.assert_not_called()
 
-def test_handle_issue_comment(github_permission_manager):
+def test_handle_issue_comment_eligible_user(github_permission_manager):
     payload = {
         'action': 'created',
         'comment': {'user': {'login': 'user'}, 'body': 'approve'},
         'repository': {'owner': {'login': 'org'}}
     }
-    with patch.object(github_permission_manager, '_is_user_eligible_for_elevation', return_value=True), \
+    with patch.object(github_permission_manager, '_is_user_eligible_for_elevation', return_value=True) as mock_elevation_eligible, \
         patch.object(github_permission_manager, '_handle_approval_comment') as mock_handle:
         github_permission_manager.handle_issue_comment(json.dumps(payload))
         mock_handle.assert_called_once()
+        mock_elevation_eligible.assert_called_once()
+
+def test_handle_issue_comment_ineligible_user(github_permission_manager):
+    payload = {
+        'action': 'created',
+        'comment': {'user': {'login': 'user'}, 'body': 'approve'},
+        'repository': {'owner': {'login': 'org'}}
+    }
+    with patch.object(github_permission_manager, '_is_user_eligible_for_elevation', return_value=False) as mock_elevation_eligible, \
+        patch.object(github_permission_manager, '_handle_approval_comment') as mock_handle:
+        github_permission_manager.handle_issue_comment(json.dumps(payload))
+        mock_handle.assert_not_called()
+        mock_elevation_eligible.assert_called_once()
 
 def test_main_handler(github_permission_manager):
     event = {'headers': {'X-GitHub-Event': 'issues'}, 'body': '{}'}

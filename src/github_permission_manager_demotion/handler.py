@@ -68,10 +68,7 @@ class GitHubPermissionRemover:
             headers=self.auth_headers
         )
         print(f"Request to get org owners: {response.status_code}")
-        org_owners = []
-        for owner in response.json():
-            print(f"Owner: {owner['login']}")
-            org_owners.append(owner['login'])
+        org_owners = [owner['login'] for owner in response.json()]
         return org_owners
 
 
@@ -94,28 +91,33 @@ class GitHubPermissionRemover:
         repository = event.get('repository')
         issue_number = event.get('issue_number')
         org_owners = self.get_all_org_owners(organization)
-        if user in org_owners:
-            if is_last_org_owner(org_owners, user):
-                self.post_comment_on_issue(repository, issue_number, "User is the last owner - therefore will not be demoted")
-                self.close_issue(repository, issue_number)
-                return
-            self.post_comment_on_issue(repository, issue_number, "User is currently an owner - demotion to member in progress")
-            self.make_member_on_github(organization, user)
-            self.post_comment_on_issue(repository, issue_number, "User has been demoted")
+        if user not in org_owners:
+            print(f"{user} is not an owner of {organization}")
+            self.post_comment_on_issue(repository, issue_number, "User is not an owner of the organization")
             self.close_issue(repository, issue_number)
+            return
 
-            table = self.dynamodb.Table('GithubElevationRequests')
+        if is_last_org_owner(org_owners, user):
+            self.post_comment_on_issue(repository, issue_number, "User is the last owner - therefore will not be demoted")
+            self.close_issue(repository, issue_number)
+            return
 
-            # Update DynamoDB
-            table.update_item(
-                Key={'user': user},
-                UpdateExpression="set #status = :s, demoted_at = :t",
-                ExpressionAttributeNames={'#status': 'status'},
-                ExpressionAttributeValues={
-                    ':s': 'demoted',
-                    ':t': datetime.now().isoformat()
-                }
-            )
+        self.post_comment_on_issue(repository, issue_number, "User is currently an owner - demotion to member in progress")
+        self.make_member_on_github(organization, user)
+        self.post_comment_on_issue(repository, issue_number, "User has been demoted")
+        self.close_issue(repository, issue_number)
+
+        table = self.dynamodb.Table('GithubElevationRequests')
+
+        table.update_item(
+            Key={'user': user},
+            UpdateExpression="set #status = :s, demoted_at = :t",
+            ExpressionAttributeNames={'#status': 'status'},
+            ExpressionAttributeValues={
+                ':s': 'demoted',
+                ':t': datetime.now().isoformat()
+            }
+        )
 
 def handler(event, context):
     github_permission_remover = GitHubPermissionRemover()
