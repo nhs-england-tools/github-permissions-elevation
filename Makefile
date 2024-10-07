@@ -8,7 +8,7 @@ include scripts/init.mk
 # Example CI/CD targets are: dependencies, build, publish, deploy, clean, etc.
 
 dependencies: # Install dependencies needed to build and test the project @Pipeline
-	# TODO: Implement installation of your project dependencies
+	./install-dependencies.sh
 
 build: # Build the project artefact @Pipeline
 	# TODO: Implement the artefact build step

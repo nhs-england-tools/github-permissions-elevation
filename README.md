@@ -1,22 +1,15 @@
-# Repository Template
+# GitHub Permissions Elevation
 
-[![CI/CD Pull Request](https://github.com/nhs-england-tools/repository-template/actions/workflows/cicd-1-pull-request.yaml/badge.svg)](https://github.com/nhs-england-tools/repository-template/actions/workflows/cicd-1-pull-request.yaml)
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=repository-template&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=repository-template)
+[![CI/CD Pull Request](https://github.com/nhs-england-tools/github-permissions-elevation/actions/workflows/cicd-1-pull-request.yaml/badge.svg)](https://github.com/nhs-england-tools/github-permissions-elevation/actions/workflows/cicd-1-pull-request.yaml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=github-permissions-elevation&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=github-permissions-elevation)
 
-Start with an overview or a brief description of what the project is about and what it does. For example -
+Currently there are specific tasks within GitHub that require the "Owner" permission. We would like to avoid individuals having long standing super-user permissions on their user. This app will enable users to operate as normal member level permissions for the majority of their tasks, only assuming the "Owner" level permissions when they require them. This will also provide an audit of when these permissions are assumed and the reason that they are assumed for.
 
-Welcome to our repository template designed to streamline your project setup! This robust template provides a reliable starting point for your new projects, covering an essential tech stack and encouraging best practices in documenting.
-
-This repository template aims to foster a user-friendly development environment by ensuring that every included file is concise and adequately self-documented. By adhering to this standard, we can promote increased clarity and maintainability throughout your project's lifecycle. Bundled within this template are resources that pave the way for seamless repository creation. Currently supported technologies are:
-
-- Terraform
-- Docker
-
-Make use of this repository template to expedite your project setup and enhance your productivity right from the get-go. Enjoy the advantage of having a well-structured, self-documented project that reduces overhead and increases focus on what truly matters - coding!
+This app will monitor for an issue being created requesting for the creator to be elevated to an Owner of the GitHub Organization. This user should be from a specific GitHub Team, and when another member of that team responds with "approved" or some other positive response, the app will update the user to "Owner". After a set period of time the app should demote the user back to a normal permission level.
 
 ## Table of Contents
 
-- [Repository Template](#repository-template)
+- [GitHub Permissions Elevation](#github-permissions-elevation)
   - [Table of Contents](#table-of-contents)
   - [Setup](#setup)
     - [Prerequisites](#prerequisites)
@@ -32,40 +25,105 @@ Make use of this repository template to expedite your project setup and enhance 
 
 ## Setup
 
-By including preferably a one-liner or if necessary a set of clear CLI instructions we improve user experience. This should be a frictionless installation process that works on various operating systems (macOS, Linux, Windows WSL) and handles all the dependencies.
+There are a few steps to configure the organisation to facilitate this app.
 
 Clone the repository
 
 ```shell
-git clone https://github.com/nhs-england-tools/repository-template.git
-cd nhs-england-tools/repository-template
+git clone https://github.com/nhs-england-tools/github-permissions-elevation.git
+cd nhs-england-tools/github-permissions-elevation
 ```
 
 ### Prerequisites
 
-The following software packages, or their equivalents, are expected to be installed and configured:
+To run locally it is assumed that you have Python 3.12 installed.
 
-- [Docker](https://www.docker.com/) container runtime or a compatible tool, e.g. [Podman](https://podman.io/),
-- [asdf](https://asdf-vm.com/) version manager,
-- [GNU make](https://www.gnu.org/software/make/) 3.82 or later,
+```bash
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt install python3.12
+sudo apt install python3.12-venv
+```
 
-> [!NOTE]<br>
-> The version of GNU make available by default on macOS is earlier than 3.82. You will need to upgrade it or certain `make` tasks will fail. On macOS, you will need [Homebrew](https://brew.sh/) installed, then to install `make`, like so:
->
-> ```shell
-> brew install make
-> ```
->
-> You will then see instructions to fix your [`$PATH`](https://github.com/nhs-england-tools/dotfiles/blob/main/dot_path.tmpl) variable to make the newly installed version available. If you are using [dotfiles](https://github.com/nhs-england-tools/dotfiles), this is all done for you.
+#### Organisation Preparation
 
-- [GNU sed](https://www.gnu.org/software/sed/) and [GNU grep](https://www.gnu.org/software/grep/) are required for the scripted command-line output processing,
-- [GNU coreutils](https://www.gnu.org/software/coreutils/) and [GNU binutils](https://www.gnu.org/software/binutils/) may be required to build dependencies like Python, which may need to be compiled during installation,
+##### Create a team
 
-> [!NOTE]<br>
-> For macOS users, installation of the GNU toolchain has been scripted and automated as part of the `dotfiles` project. Please see this [script](https://github.com/nhs-england-tools/dotfiles/blob/main/assets/20-install-base-packages.macos.sh) for details.
+This team is for your trusted users to be members of. Members of this team will be able to request to be elevated to an Owner and will be able to approve requests to be elevated to Owner. From the organisation page in GitHub navigate to Teams
 
-- [Python](https://www.python.org/) required to run Git hooks,
-- [`jq`](https://jqlang.github.io/jq/) a lightweight and flexible command-line JSON processor.
+1. Create a new team
+1. set the Team name to `can escalate to become an owner`
+1. Set Team visibility to `Secret`
+1. Ensure that Team notifications are set to `Enabled`
+1. Click the button to `Create team`
+1. Add the appropriate team members to this team
+
+##### Create a Repository
+
+The app should only be notified when new issues are created on specific repositories, namely we want a dedicated repository that org Owners can use to request elevation. Therefore, in your target Org create a new repository called `ElevateMeToOwner` this should be a *Private* repository that can only be accessed by the team created above.
+
+#### GitHub App Setup
+
+Create a GitHub App with the necessary permissions to manage organization members and read issues.
+Install the app in your GitHub organization.
+
+##### Steps to create GitHub App
+
+1. Navigate to your GitHub User
+1. In the left hand navigation select "Developer Settings"
+1. Under GitHub Apps select the "New GitHub App" button.
+1. Provide the Apps name as `ElevateMeToOwner`
+1. In the Write text box provide some information about the app.
+1. In Homepage URL paste the link to your GitHub repository README file.
+1. In the Webhook section, ensure that the checkbox next to Active is ticked.
+1. In the Webhook URL paste in the link output from the Terraform run.
+1. Create a secret for the token `openssl rand -base64 32` and paste it in to the Secret field.
+1. Expand the "Repository permissions" drop down and scroll down to "Issues" select `Access: Read and write`
+1. Expand the "Organization permissions" drop down and scroll down to "Members" select `Access: Read and write`
+1. Under "Subscribe to events" ensure that the checkbox for "Issues" and "Issue comment" is selected.
+1. Under "Where can this GitHub App be installed?" ensure that `Any account` is selected.
+1. Press the `Create GitHub App` button.
+
+###### Generate a Private Key
+
+You *must* create a private key to be able to install your GitHub app.
+
+1. Press the `generate a private key` link from the app page
+1. Press the `Generate a private key` button.
+1. This will download your private key to your local machine.
+1. We will need to store this key as an SSM parameter in AWS.
+
+###### Create a Client Secret
+
+To authenticate as the app you need to generate a Client Secret. From the app settings page:
+
+1. Press the Generate a new client secret button
+1. Copy the provided client secret
+1. This should then be stored in SSM parameter store
+
+###### Update AWS SSM entries
+
+We now need to ensure that the necessary information is stored in our AWS SSM parameters for this installation.
+
+1. private key
+1. client id
+1. secret - this is the secret for the client
+1. webhook secret
+1. app id
+1. installation ID
+
+###### Install the app to your Org
+
+From the GitHub app page select the `Install App` option from the left hand menu.
+You will be shown all of the organisations you can install to as well as your user - please select the organisation you wish to install to and press the `Install` button.
+
+In the Install dialogue select to Install on your org to `Only select repositories`
+Select the `ElevateMeToOwner` repository you created earlier.
+Review the permissions being requested - these are:
+
+1. Read access to metadata
+1. Read and write access to issues and members
+
+Press the `Install` button.
 
 ### Configuration
 
@@ -77,7 +135,7 @@ make config
 
 ## Usage
 
-After a successful installation, provide an informative example of how this project can be used. Additional code snippets, screenshots and demos work well in this space. You may also link to the other documentation resources, e.g. the [User Guide](./docs/user-guide.md) to demonstrate more use cases and to show more features.
+After a successful installation and Terraform apply follow the steps above to configure the app in AWS lambda.
 
 ### Testing
 
